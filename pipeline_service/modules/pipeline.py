@@ -137,7 +137,7 @@ class GenerationPipeline:
         image_edited = self.qwen_edit.edit_image(
             prompt_image=image,
             seed=request.seed,
-            prompt="Show this object in three-quarters view and make sure it is fully visible. Turn background neutral solid color contrasting with an object. Delete background details. Delete watermarks. Keep object shape, colors and if possible, effects(glow, lightning, steam, etc.). Sharpen image details",
+            prompt="Show this object in three-quarters view and make sure it is fully visible. Turn background neutral solid color contrasting with an object. Delete background details. Delete watermarks. Keep object shape, colors and some subobjects or things around the main object. Sharpen image details",
         )
 
         # 2. Remove background

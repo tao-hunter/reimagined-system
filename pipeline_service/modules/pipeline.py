@@ -140,10 +140,16 @@ class GenerationPipeline:
             prompt="Show this object in three-quarters view and make sure it is fully visible. Turn background neutral solid color contrasting with an object. Delete background details. Delete watermarks. Keep object shape, colors and some subobjects or things around the main object. Sharpen image details",
         )
 
+        imaged_edited_angle_90 = self.qwen_edit.edit_image(
+            prompt_image=image_edited,
+            seed=request.seed,
+            prompt="Rotate the image 90 degrees clockwise. Keep object shape, colors and some subobjects or things around the main object. Sharpen image details",
+        )
+
         # 2. Remove background
         image_without_background = self.rmbg.remove_background(image_edited)
-
         original_image_without_background = self.rmbg.remove_background(image)
+        imaged_edited_angle_90_without_background = self.rmbg.remove_background(imaged_edited_angle_90)
 
         trellis_result: Optional[TrellisResult] = None
 
@@ -154,9 +160,9 @@ class GenerationPipeline:
         trellis_result = self.trellis.generate(
             TrellisRequest(
                 images=[
-                    original_image_without_background,
                     image_without_background,
-                    image
+                    original_image_without_background,
+                    imaged_edited_angle_90_without_background,
                 ],
                 seed=request.seed,
                 params=trellis_params,

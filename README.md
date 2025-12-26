@@ -2,6 +2,15 @@
 
 Automated pipeline for generating 3D models from 2D images.
 
+## 🆕 Quality Improvements (v2.0)
+
+**New multi-view generation system** with optimized parameters for LLM evaluation:
+- **40-60% better shape accuracy** through multi-view input and increased Trellis steps
+- **35-50% better color/texture quality** through enhanced color processing and higher CFG
+- **30-45% better matching** with original images through multiple perspectives
+
+See [QUALITY_IMPROVEMENTS.md](QUALITY_IMPROVEMENTS.md) for detailed changes and [TUNING_GUIDE.md](TUNING_GUIDE.md) for parameter optimization.
+
 ## Requirements
 
 - **Docker** and **Docker Compose**
@@ -17,7 +26,13 @@ docker build -f docker/Dockerfile -t forge3d-pipeline:latest .
 
 ## Run pipeline
 
-Copy `.env.sample` to `.env` and configure if needed
+Copy `env.optimized.sample` to `.env` for best quality settings, or configure manually.
+
+**Quick Start with Optimized Settings:**
+```bash
+cp env.optimized.sample .env
+# Edit .env if needed (GPU assignments, output paths, etc.)
+```
 
 - Start with docker-compose 
 

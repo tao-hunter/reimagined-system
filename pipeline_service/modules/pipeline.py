@@ -23,6 +23,7 @@ from schemas import (
 from modules.image_edit.qwen_edit_module import QwenEditModule
 from modules.background_removal.rmbg_manager import BackgroundRemovalService
 from modules.gs_generator.trellis_manager import TrellisService
+from modules.image_enhancement import ImageEnhancer
 from modules.utils import (
     secure_randint,
     set_random_seed,
@@ -40,6 +41,7 @@ class GenerationPipeline:
         self.qwen_edit = QwenEditModule(settings)
         self.rmbg = BackgroundRemovalService(settings)
         self.trellis = TrellisService(settings)
+        self.enhancer = ImageEnhancer()  # No async needed
 
     async def startup(self) -> None:
         """Initialize all pipeline components."""
@@ -133,37 +135,49 @@ class GenerationPipeline:
         # Decode input image
         image = decode_image(request.prompt_image)
 
-        # 1. Edit the image using Qwen Edit
-        image_edited = self.qwen_edit.edit_image(
+        # 1. Generate multiple edited views for improved 3D quality
+        # This provides Trellis with better information about shape, color, and details
+        edited_images = self.qwen_edit.edit_image_multi_view(
             prompt_image=image,
-            seed=request.seed,
-            prompt="Show this object in three-quarters view and make sure it is fully visible. Turn background neutral solid color contrasting with an object. Delete background details. Delete watermarks. Keep object shape, colors and some subobjects or things around the main object. Sharpen image details",
+            seed=request.seed
         )
+        
+        # Select the best edited image for response (first one - three-quarters view)
+        image_edited = edited_images[0]
 
-        imaged_edited_angle_90 = self.qwen_edit.edit_image(
-            prompt_image=image_edited,
-            seed=request.seed,
-            prompt="Rotate the image 90 degrees clockwise. Keep object shape, colors and some subobjects or things around the main object. Sharpen image details",
-        )
+        # 2. Enhance images for better color and detail quality
+        enhanced_images = []
+        for edited_img in edited_images:
+            # Apply color enhancement for better matching and texture
+            enhanced = self.enhancer.enhance_colors_for_matching(edited_img)
+            enhanced_images.append(enhanced)
 
-        # 2. Remove background
-        image_without_background = self.rmbg.remove_background(image_edited)
+        # 3. Remove background from all enhanced images
+        images_without_background = []
+        for enhanced_img in enhanced_images:
+            img_no_bg = self.rmbg.remove_background(enhanced_img)
+            # Final preparation for Trellis (edge sharpening, contrast)
+            img_prepared = self.enhancer.prepare_for_trellis(img_no_bg)
+            images_without_background.append(img_prepared)
+
+        # Also process original image (without heavy enhancement to preserve original colors)
         original_image_without_background = self.rmbg.remove_background(image)
-        imaged_edited_angle_90_without_background = self.rmbg.remove_background(imaged_edited_angle_90)
+        original_prepared = self.enhancer.prepare_for_trellis(original_image_without_background)
 
         trellis_result: Optional[TrellisResult] = None
 
         # Resolve Trellis parameters from request
         trellis_params: TrellisParams = request.trellis_params
 
-        # 3. Generate the 3D model
+        # 3. Generate the 3D model with multi-view input for better quality
+        # Pass all processed images to Trellis for improved shape and texture
+        trellis_input_images = [original_prepared] + images_without_background
+        
+        logger.info(f"Generating 3D model from {len(trellis_input_images)} input views")
+        
         trellis_result = self.trellis.generate(
             TrellisRequest(
-                images=[
-                    image_without_background,
-                    original_image_without_background,
-                    imaged_edited_angle_90_without_background,
-                ],
+                images=trellis_input_images,
                 seed=request.seed,
                 params=trellis_params,
             )
@@ -171,14 +185,14 @@ class GenerationPipeline:
 
         # Save generated files
         if self.settings.save_generated_files:
-            save_files(trellis_result, image_edited, image_without_background)
+            save_files(trellis_result, image_edited, images_without_background[0])
 
         # Convert to PNG base64 for response (only if needed)
         image_edited_base64 = None
         image_without_background_base64 = None
         if self.settings.send_generated_files:
             image_edited_base64 = to_png_base64(image_edited)
-            image_without_background_base64 = to_png_base64(image_without_background)
+            image_without_background_base64 = to_png_base64(images_without_background[0])
 
         t2 = time.time()
         generation_time = t2 - t1

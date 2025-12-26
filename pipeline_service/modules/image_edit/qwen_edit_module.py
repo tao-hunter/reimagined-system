@@ -42,6 +42,11 @@ class QwenEditModule(QwenManager):
         self.edit_model_path = settings.qwen_edit_model_path
         self.prompt_path = settings.qwen_edit_prompt_path
         self.prompting = self._set_prompting()
+        
+        # Load view prompts for multi-view generation
+        self.view_prompts = self._load_view_prompts()
+        self.generate_multiple_views = settings.generate_multiple_views
+        self.num_view_variations = settings.num_view_variations
 
         self.pipe_config = {
             "num_inference_steps": settings.num_inference_steps,
@@ -50,6 +55,15 @@ class QwenEditModule(QwenManager):
             "width": settings.qwen_edit_width,
 
         }
+    
+    def _load_view_prompts(self) -> list[dict]:
+        """Load view prompts from configuration."""
+        view_prompts_path = Path(__file__).parent.parent.parent / "config" / "view_prompts.json"
+        if view_prompts_path.exists():
+            with open(view_prompts_path, "r") as f:
+                data = json.load(f)
+                return data.get("views", [])
+        return []
 
     def _set_text_prompting(self, path: Optional[PathLike] = None) -> TextPrompting:
         path = path or self.prompt_path
@@ -175,3 +189,59 @@ class QwenEditModule(QwenManager):
         except Exception as e:
             logger.error(f"Error generating image: {e}")
             raise e
+    
+    def edit_image_multi_view(self, prompt_image: Image.Image, seed: int) -> list[Image.Image]:
+        """
+        Generate multiple view variations of the image for improved 3D quality.
+        
+        Args:
+            prompt_image: The prompt image to edit.
+            seed: Random seed for reproducibility.
+        
+        Returns:
+            List of edited images from different prompts optimized for 3D generation.
+        """
+        if self.pipe is None:
+            logger.error("Edit Model is not loaded")
+            raise RuntimeError("Edit Model is not loaded")
+        
+        if not self.generate_multiple_views or not self.view_prompts:
+            # Fallback to single view
+            return [self.edit_image(prompt_image, seed)]
+        
+        edited_images = []
+        
+        try:
+            start_time = time.time()
+            
+            # Generate views using different prompts
+            num_views = min(self.num_view_variations, len(self.view_prompts))
+            
+            for i in range(num_views):
+                view_prompt = self.view_prompts[i]
+                view_seed = seed + i  # Slightly vary seed for diversity
+                
+                logger.info(f"Generating view {i+1}/{num_views}: {view_prompt['name']}")
+                
+                prompting = {
+                    "prompt": view_prompt["positive"],
+                    "negative_prompt": view_prompt["negative"]
+                }
+                
+                result = self._run_edit_pipe(
+                    prompt_image=prompt_image,
+                    **prompting,
+                    seed=view_seed
+                )
+                
+                edited_images.append(result.images[0])
+            
+            generation_time = time.time() - start_time
+            logger.success(f"Generated {len(edited_images)} view variations in {generation_time:.2f}s")
+            
+            return edited_images
+            
+        except Exception as e:
+            logger.error(f"Error generating multi-view images: {e}")
+            # Fallback to single view on error
+            return [self.edit_image(prompt_image, seed)]

@@ -1,0 +1,20 @@
+{
+  "views": [
+    {
+      "name": "three_quarters",
+      "positive": "Show this object in a clear three-quarters view angle with all features fully visible. Clean neutral background in solid contrasting color. Remove background clutter and watermarks. Preserve all object colors and textures accurately. Enhance edge sharpness and surface details. Ensure complete object visibility without cropping.",
+      "negative": "NSFW, (worst quality:2), (low quality:2), partial view, cropped, occluded, side view only, front view only, back view only, top-down view, extreme angles, distorted perspective, multiple objects, complex background, dramatic lighting, harsh shadows, (monochrome), (grayscale), blurry, motion blur, depth of field, bokeh, unclear edges, fused details, missing parts, incomplete object"
+    },
+    {
+      "name": "color_enhanced",
+      "positive": "Display object with vibrant accurate colors and rich surface textures. Clean white or neutral background. Enhance color saturation and material details while maintaining photorealistic appearance. Show clear surface properties and texture patterns. Remove watermarks and background noise. Perfect lighting for color accuracy.",
+      "negative": "NSFW, (worst quality:2), (low quality:2), washed out colors, desaturated, color banding, incorrect colors, muddy textures, flat appearance, over-processed, artificial colors, color bleeding, noise, grain, compression artifacts, (monochrome), (grayscale), overexposed, underexposed"
+    },
+    {
+      "name": "detail_focused",
+      "positive": "Sharp detailed view of the complete object showing all geometric features and surface characteristics. Neutral background for maximum contrast. Emphasize structural details, edges, and surface topology. Maintain accurate proportions and spatial relationships. Remove distractions and enhance clarity.",
+      "negative": "NSFW, (worst quality:2), (low quality:2), soft focus, blurry details, smoothed features, loss of detail, simplified geometry, distorted proportions, (bad anatomy:1.5), melted features, merged parts, unclear boundaries, vague shapes, abstract, stylized"
+    }
+  ]
+}
+

@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     num_view_variations: int = Field(default=3, env="NUM_VIEW_VARIATIONS")  # Generate 3 variations with different prompts
 
     # Backgorund removal settings
-    background_removal_model_id: str = Field(default="tuandao-zenai/rm_bg", env="BACKGROUND_REMOVAL_MODEL_ID")
+    background_removal_model_id: str = Field(default="tao-hunter/RMBG-2.0", env="BACKGROUND_REMOVAL_MODEL_ID")
     input_image_size: tuple[int, int] = Field(default=(1024, 1024), env="INPUT_IMAGE_SIZE") # (height, width)
     output_image_size: tuple[int, int] = Field(default=(768, 768), env="OUTPUT_IMAGE_SIZE") # (height, width) - Increased from 518 for better detail
     padding_percentage: float = Field(default=0.15, env="PADDING_PERCENTAGE")  # Reduced from 0.2 to keep object larger
